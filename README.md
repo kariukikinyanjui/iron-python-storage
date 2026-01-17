@@ -14,6 +14,42 @@ This project moves beyond standard library abstractions to interact directly wit
 
 Unlike relational databases (PostgreSQL/MySQL) that use B-Trees for read-heavy workloads, Iron-Python is optimized for **write-heavy** systems (similar to RocksDB or Cassandra). By treating the disk as a sequential log, it eliminates random disk seeks, maximizing write throughput.
 
+```
+sequenceDiagram
+    participant User
+    participant Engine as StorageEngine
+    participant WAL as Write-Ahead Log (Disk)
+    participant Mem as MemTable (RAM)
+    participant SST as SSTable (Disk)
+
+    Note over User, SST: 🚀 Phase 1: The Write Path (Durability First)
+    User->>Engine: put(key, value)
+    Engine->>WAL: append(key, value)
+    WAL-->>Engine: ACK (fsync complete)
+    [cite_start]Note right of WAL: Data is now safe from power loss [cite: 37, 44]
+    Engine->>Mem: insert(key, value)
+    Mem-->>Engine: OK
+
+    Note over User, SST: ❄️ Phase 2: The Flush (Immutable Storage)
+    Engine->>Mem: Check Size > Threshold
+    alt MemTable Full
+        Engine->>SST: Flush Sorted Data to .sst File
+        [cite_start]Note right of SST: Sequential Write (High Throughput) [cite: 9-11]
+        Engine->>Mem: Reset / Clear
+    end
+
+    Note over User, SST: 🔍 Phase 3: The Read Path (Tiered Lookup)
+    User->>Engine: get(key)
+    Engine->>Mem: search(key)
+    alt Found in RAM
+        Mem-->>User: return value
+    else Not in RAM
+        Engine->>SST: search(key) via mmap
+        [cite_start]Note right of SST: Zero-Copy Read [cite: 51]
+        SST-->>User: return value
+    end
+```
+
 ### 1. The MemTable (In-Memory Buffer)
 * **Structure:** A **Skip List** (Probabilistic Data Structure).
 * **Rationale:** While Red-Black trees offer $O(\log N)$ balanced access, they are complex to implement without object overhead. Skip Lists provide the same asymptotic complexity with significantly simpler concurrency logic.
