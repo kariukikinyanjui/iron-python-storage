@@ -1,7 +1,7 @@
 import mmap
 import os
 import struct
-from typing import Optional
+from typing import Optional, Generator, Tuple
 
 
 class SSTableReader:
@@ -13,6 +13,36 @@ class SSTableReader:
         # access=mmap.ACCESS_READ ensures we don't accidentally modify immutable data
         self.mm = mmap.mmap(self.file.fileno(), 0, access=mmap.ACCESS_READ)
         self.file_size = os.path.getsize(filepath)
+
+    def __iter__(self) -> Generator[Tuple[str, str], None, None]:
+        """
+        Yields (key, value) pairs from the beginning of the file.
+        Essential for Compaction.
+        """
+        offset = 0
+        while offset < self.file_size:
+            # 1. Read Key Length
+            key_len_bytes = self.mm[offset : offset + 4]
+            if not key_len_bytes: break
+            key_len = struct.unpack('>I', key_len_bytes)[0]
+            offset += 4
+
+            # 2. Read Key
+            key_bytes = self.mm[offset : offset + key_len]
+            key = key_bytes.decode('utf-8')
+            offset += key_len
+
+            # 3. Read value Length
+            val_len_bytes = self.mm[offset : offset + 4]
+            val_len = struct.unpack('>I', val_len_bytes)[0]
+            offset += 4
+
+            # 4. Read Value
+            val_bytes = self.mm[offset : offset + val_len]
+            val = val_bytes.decode('utf-8')
+            offset += val_len
+
+            yield key, val
 
     def search(self, search_key: str) -> Optional[str]:
         """
