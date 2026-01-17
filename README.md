@@ -14,7 +14,7 @@ This project moves beyond standard library abstractions to interact directly wit
 
 Unlike relational databases (PostgreSQL/MySQL) that use B-Trees for read-heavy workloads, Iron-Python is optimized for **write-heavy** systems (similar to RocksDB or Cassandra). By treating the disk as a sequential log, it eliminates random disk seeks, maximizing write throughput.
 
-```
+```mermaid
 sequenceDiagram
     participant User
     participant Engine as StorageEngine
