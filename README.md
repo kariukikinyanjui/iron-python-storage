@@ -26,7 +26,7 @@ sequenceDiagram
     User->>Engine: put(key, value)
     Engine->>WAL: append(key, value)
     WAL-->>Engine: ACK (fsync complete)
-    [cite_start]Note right of WAL: Data is now safe from power loss [cite: 37, 44]
+    Note right of WAL: Data is now safe from power loss
     Engine->>Mem: insert(key, value)
     Mem-->>Engine: OK
 
@@ -34,7 +34,7 @@ sequenceDiagram
     Engine->>Mem: Check Size > Threshold
     alt MemTable Full
         Engine->>SST: Flush Sorted Data to .sst File
-        [cite_start]Note right of SST: Sequential Write (High Throughput) [cite: 9-11]
+        Note right of SST: Sequential Write (High Throughput)
         Engine->>Mem: Reset / Clear
     end
 
@@ -45,7 +45,7 @@ sequenceDiagram
         Mem-->>User: return value
     else Not in RAM
         Engine->>SST: search(key) via mmap
-        [cite_start]Note right of SST: Zero-Copy Read [cite: 51]
+        Note right of SST: Zero-Copy Read
         SST-->>User: return value
     end
 ```
